@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05030a">
+<title>You & Me — Neon Heart</title>
+<style>
+:root{--pink:#ff477e;--hot:#ff175d;--bg:#05030a;--text:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+body{overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 15%,rgba(0,0,0,.2) 65%,#000 130%)}
+.content{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;pointer-events:none}
+.kicker{font-size:11px;letter-spacing:.38em;text-transform:uppercase;color:#ff9db8;opacity:.85;margin-bottom:20px;animation:fade 2s both}
+h1{margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:500;letter-spacing:.22em;font-size:clamp(24px,5vw,43px);text-shadow:0 0 16px #ff356b,0 0 45px #ff174f;animation:glow 1.7s ease-in-out infinite alternate}
+.subtitle{margin-top:18px;font-size:clamp(9px,2vw,12px);letter-spacing:.42em;color:#ffc0d0;text-transform:uppercase}
+.hint{position:fixed;bottom:26px;left:0;right:0;text-align:center;color:#bda6b0;font-size:12px;letter-spacing:.08em;opacity:.8;animation:fade 3s both}
+.controls{position:fixed;top:18px;right:18px;display:flex;gap:8px}
+button{pointer-events:auto;background:#ffffff0b;border:1px solid #ff83a655;color:#ffdce6;border-radius:999px;padding:9px 13px;font-size:12px;cursor:pointer;backdrop-filter:blur(8px)}
+button:hover{background:#ff477e22}
+@keyframes glow{from{filter:brightness(.85)}to{filter:brightness(1.35)}}
+@keyframes fade{from{opacity:0;transform:translateY(7px)}to{opacity:.85;transform:translateY(0)}}
+@media(max-width:520px){.kicker{letter-spacing:.22em}.subtitle{letter-spacing:.25em}.hint{bottom:20px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Animated glowing heart in a star field"></canvas>
+<div class="vignette"></div>
+<div class="content">
+  <div class="kicker">a little universe of its own</div>
+  <h1 id="title">YOU &amp; ME</h1>
+  <div class="subtitle" id="subtitle">written in the stars</div>
+</div>
+<div class="controls">
+  <button id="replay" type="button">Replay ✦</button>
+  <button id="edit" type="button">Personalize</button>
+</div>
+<div class="hint">made of stardust · tap replay to see the heartbeat again</div>
+<script>
+(() => {
+ const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
+ let w=0,h=0,dpr=1,stars=[],particles=[],heartPoints=[],start=performance.now(),beatAt=0,mode='pulse';
+ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ function resize(){dpr=Math.min(devicePixelRatio||1,2);w=innerWidth;h=innerHeight;canvas.width=w*dpr;canvas.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+ stars=Array.from({length:Math.min(240,Math.floor(w*h/5000))},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*1.5+.2,a:Math.random()*.65+.15,p:Math.random()*6.28}));
+ buildHeart();}
+ function point(t){return {x:16*Math.pow(Math.sin(t),3),y:-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))};}
+ function buildHeart(){heartPoints=[];for(let i=0;i<420;i++){let t=i/420*Math.PI*2,p=point(t);heartPoints.push({x:p.x,y:p.y,t});}
+ particles=Array.from({length:850},()=>{let t=Math.random()*Math.PI*2,p=point(t),s=.76+Math.random()*.25;return {x:p.x*s,y:p.y*s,t,offset:Math.random()*10,r:Math.random()*1.6+.35,a:.25+Math.random()*.7,speed:(Math.random()-.5)*.012};});}
+ function scale(){return Math.min(w,h)*.016}
+ function draw(now){ctx.clearRect(0,0,w,h);
+ // distant stars
+ for(const s of stars){let tw=reduce?1:(.65+.35*Math.sin(now*.001+s.p));ctx.globalAlpha=s.a*tw;ctx.fillStyle='#ffeaf1';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}
+ ctx.globalAlpha=1;
+ const sc=scale(),cx=w/2,cy=h/2;
+ const elapsed=(now-start)/1000;
+ const pulse=reduce?1:(1+.045*Math.pow(Math.max(0,Math.sin(now*.0032)),12)+.018*Math.sin(now*.0064));
+ // heartbeat trace at the beginning, then the particle heart materializes
+ if(elapsed<2.7){let prog=Math.min(1,elapsed/2.2),x0=w*.12,x1=w*.88,y=cy,xx=x0+(x1-x0)*prog;
+ ctx.save();ctx.strokeStyle='#ff326c';ctx.lineWidth=2.4;ctx.shadowColor='#ff175d';ctx.shadowBlur=14;ctx.beginPath();ctx.moveTo(x0,y);
+ for(let x=x0;x<=xx;x+=2){let u=(x-x0)/(x1-x0),v=0;if(u>.47&&u<.58){let q=(u-.47)/.11;v= -Math.exp(-Math.pow((q-.28)/.08,2))*h*.24+Math.exp(-Math.pow((q-.48)/.045,2))*h*.14;}ctx.lineTo(x,y+v);}
+ ctx.stroke();ctx.restore();
+ }
+ const reveal=reduce?1:Math.min(1,Math.max(0,(elapsed-1.4)/2.6));
+ ctx.save();ctx.translate(cx,cy+sc*1.2);ctx.scale(sc*pulse,sc*pulse);
+ // heart-shaped warm haze
+ let grd=ctx.createRadialGradient(0,0,2,0,0,30);grd.addColorStop(0,'rgba(255,25,88,.24)');grd.addColorStop(1,'rgba(255,25,88,0)');
+ ctx.fillStyle=grd;ctx.beginPath();ctx.arc(0,0,30,0,Math.PI*2);ctx.fill();
+ // glowing outline
+ ctx.globalAlpha=.25+.65*reveal;ctx.beginPath();heartPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.strokeStyle='#ff668e';ctx.lineWidth=.35;ctx.shadowColor='#ff245e';ctx.shadowBlur=12;ctx.stroke();
+ // particles along heart
+ for(const p of particles){if(!reduce)p.t+=p.speed;let base=point(p.t),tw=.55+.45*Math.sin(now*.002+p.offset);ctx.globalAlpha=(.18+p.a*.72*tw)*reveal;ctx.fillStyle=Math.random()<.012?'#fff':'#ff5b86';ctx.shadowColor='#ff1b5a';ctx.shadowBlur=3+p.r*3;ctx.beginPath();ctx.arc(base.x,base.y,p.r,0,Math.PI*2);ctx.fill();}
+ ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;
+ requestAnimationFrame(draw);
+ }
+ document.getElementById('replay').addEventListener('click',()=>{start=performance.now();});
+ document.getElementById('edit').addEventListener('click',()=>{let a=prompt('Main text (e.g. YOU & ME):',document.getElementById('title').innerText);if(a!==null&&a.trim())document.getElementById('title').textContent=a.trim();let b=prompt('Small text (e.g. WRITTEN IN THE STARS):',document.getElementById('subtitle').innerText);if(b!==null&&b.trim())document.getElementById('subtitle').textContent=b.trim();});
+ addEventListener('resize',resize);resize();requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
+ز
